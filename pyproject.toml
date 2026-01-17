@@ -1,6 +1,6 @@
 [project]
 name = "simio"
-version = "0.1.0"
+version = "1.0.0"
 description = "Simple zero-dependency asynchronous IO"
 license = "Unlicense"
 authors = [
