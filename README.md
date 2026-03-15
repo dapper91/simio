@@ -81,19 +81,15 @@ aio.run(main())
 ```python
 import asyncio as aio
 import logging
-import socket as sc
 
 from simio import net
 
 
-async def echo(socket: sc.socket) -> None:
-    loop = aio.get_running_loop()
+async def echo(socket: net.TcpSocket) -> None:
+    logging.info("client %s connected", socket.getpeername())
 
-    peer_address, peer_port = net.get_socket_peer_address(socket)
-    logging.info("client %s:%d connected", peer_address, peer_port)
-
-    data = await loop.sock_recv(socket, 1024)
-    await loop.sock_sendall(socket, data)
+    data = await socket.recv(1024)
+    await socket.sendall(data)
 
 
 async def main() -> None:

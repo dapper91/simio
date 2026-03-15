@@ -1,6 +1,8 @@
 import asyncio as aio
 import logging
 
+from simio.runtime import TaskGroup
+
 from . import Stream, StreamReader, StreamWriter
 
 logger = logging.getLogger(__package__)
@@ -32,9 +34,9 @@ async def pipe_streams_bidirectional(str1: Stream, str2: Stream, buffer_size: in
     """
 
     try:
-        async with aio.TaskGroup() as binders:
-            binders.create_task(pipe_streams(str1, str2, buffer_size))
-            binders.create_task(pipe_streams(str2, str1, buffer_size))
+        async with TaskGroup(exit_when=aio.FIRST_COMPLETED, propagate_exceptions=True) as pipes:
+            pipes.create_task(pipe_streams(str1, str2, buffer_size))
+            pipes.create_task(pipe_streams(str2, str1, buffer_size))
     except aio.CancelledError:
         pass
     except ExceptionGroup as exc:

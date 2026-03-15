@@ -1,46 +1,29 @@
-import asyncio as aio
 import socket as sc
-from types import TracebackType
-from typing import Optional, Self, Union
+from typing import Any, Optional, Union
 
+from simio.net.address import SocketAddress
 from simio.stream import Stream
 
+from .socket import TcpSocket
 
-class TcpStream(Stream):
+
+class TcpStream[TcpSocketT: TcpSocket[Any]](Stream):
     """
     TCP stream.
     """
 
-    def __init__(self, socket: sc.socket):
-        assert not socket.getblocking(), "socket must be in non-blocking mode"
-
+    def __init__(self, socket: TcpSocketT):
         self._socket = socket
 
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(
-            self,
-            exc_type: Optional[type[Exception]],
-            exc_val: Optional[Exception],
-            exc_tb: Optional[TracebackType],
-    ) -> bool:
-        await self.close()
-        return False
-
     @property
-    def socket(self) -> sc.socket:
+    def socket(self) -> TcpSocketT:
         return self._socket
 
     async def read(self, max_bytes: int) -> bytes:
-        loop = aio.get_running_loop()
-
-        return await loop.sock_recv(self._socket, max_bytes)
+        return await self._socket.recv(max_bytes)
 
     async def write(self, data: Union[bytes, bytearray, memoryview]) -> int:
-        loop = aio.get_running_loop()
-
-        await loop.sock_sendall(self._socket, data)
+        await self._socket.sendall(data)
         return len(data)
 
     async def close_reader(self) -> None:
@@ -53,34 +36,24 @@ class TcpStream(Stream):
         self._socket.close()
 
 
-async def open_tcp_stream(
-        host: str,
-        port: int,
-        family: sc.AddressFamily = sc.AddressFamily.AF_INET,
-        proto: int = -1,
-        bind: Optional[tuple[str, int]] = None,
-) -> TcpStream:
+async def open_tcp_stream[AddressT: SocketAddress](
+        address: AddressT,
+        socket:  TcpSocket[AddressT],
+        bind: Optional[AddressT] = None,
+) -> TcpStream[TcpSocket[AddressT]]:
     """
     Opens a tcp connection.
 
-    :param host: hostname to connect to
-    :param port: port to connect to
-    :param family: address family
-    :param proto: protocol
+    :param address: address to connect to
+    :param socket: client socket
     :param bind: local host/port pair to bind to
     :return: tcp stream
     """
 
-    loop = aio.get_running_loop()
-
-    socket = sc.socket(family=family, type=sc.SocketKind.SOCK_STREAM, proto=proto)
     try:
-        socket.setblocking(False)
         if bind:
             socket.bind(bind)
-
-        await loop.sock_connect(socket, (host, port))
-
+        await socket.connect(address)
     except BaseException:
         socket.close()
         raise

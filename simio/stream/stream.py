@@ -183,7 +183,7 @@ class StreamWriter(abc.ABC):
             exc_val: Optional[Exception],
             exc_tb: Optional[TracebackType],
     ) -> bool:
-        await self.close_writer()
+        await self.close()
         return False
 
     @abc.abstractmethod
@@ -248,16 +248,20 @@ class BufferedStreamWriter(StreamWriter):
         Closes writer end of the stream.
         """
 
-        await self.drain()
-        return await self._writer.close_writer()
+        try:
+            await self.drain()
+        finally:
+            return await self._writer.close_writer()
 
     async def close(self) -> None:
         """
         Closes the stream.
         """
 
-        await self.drain()
-        return await self._writer.close()
+        try:
+            await self.drain()
+        finally:
+            return await self._writer.close()
 
     def feed(self, data: Union[bytes, bytearray, memoryview]) -> None:
         """
@@ -278,7 +282,7 @@ class BufferedStreamWriter(StreamWriter):
             data = data[written:]
 
 
-class Stream(StreamReader, StreamWriter, abc.ABC):
+class Stream(StreamWriter, StreamReader, abc.ABC):
     """
     Asynchronous stream.
     """
@@ -293,7 +297,7 @@ class Stream(StreamReader, StreamWriter, abc.ABC):
         return False
 
 
-class BufferedStream(Stream, BufferedStreamReader, BufferedStreamWriter):
+class BufferedStream(BufferedStreamWriter, BufferedStreamReader, Stream):
     """
     Asynchronous buffered stream.
     """
