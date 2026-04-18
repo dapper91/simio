@@ -4,7 +4,10 @@ from simio import net, stream
 
 
 async def main() -> None:
-    async with await net.open_tcp_stream("httpforever.com", 80) as http_stream:
+    async with await net.open_tcp_stream(
+            address=net.IPv4Address("httpforever.com", 80),
+            socket=net.TcpSocketInet(),
+    ) as http_stream:
         buffered_stream = stream.BufferedStream(http_stream)
         await buffered_stream.write_all(
             b'GET / HTTP/1.1\r\n'
